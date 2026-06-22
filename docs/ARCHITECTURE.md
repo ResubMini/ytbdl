@@ -148,7 +148,7 @@ ytbdl/
 | **P3** | Cookie 一键导入（快照）+ 多音轨 + 中文右键 + 全局错误 + 启动画面 | ✅ |
 | **P4a** | Tauri Updater 接入 + 发布脚本 + 检查更新 UI | ✅ |
 | **P4b** | Cloudflare R2 托管 + 实测自动更新 | ⬜ 待配置 |
-| **P4c** | Windows 构建（本地脚本 / GitHub Actions） | 🟡 workflow 已写，待首次验证 |
+| **P4c** | Windows 构建（本地脚本 / GitHub Actions） | ✅ Action 已实测出包 |
 | **P4d** | 代码签名/公证（Apple $99/年） | ⬜ 待 |
 | **P4e** | 账号/收费（云端 auth + 功能开关） | ⬜ 待 |
 

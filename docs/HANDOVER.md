@@ -111,7 +111,7 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 
 ### 🔴 高优先级
 1. **Cookie 自动刷新未实现**：用户决定走「快照 + 提醒刷新」。需在 sidecar 启动时自动重新导入 cookie（钥匙串已「始终允许」，静默）。位置：`backend/app/main.py` lifespan 里调 `cookies.import_from_browser()`。
-2. **Windows 构建待验证**：已添加手动触发的 `.github/workflows/build-windows.yml`，需在 `ResubMini/ytbdl` 配置 `TAURI_SIGNING_PRIVATE_KEY` 后跑首次构建。Win 本地 PowerShell 脚本仍可作备用。
+2. **Windows 构建已打通**：`ResubMini/ytbdl` 的手动 Build Windows Action 已实测成功，产出安装包和 `latest.json` Artifact。Win 本地 PowerShell 脚本仍可作备用。
 3. **Cloudflare R2 未配置**：updater 端点 `update.mp4web.com/latest.json` 还没托管。用户需建 R2 bucket + 绑定域名 + 上传 dist-publish/ 里的 latest.json + .tar.gz。
 
 ### 🟡 中优先级
