@@ -46,9 +46,13 @@ def main() -> None:
     ]
     print("[build] running PyInstaller...")
     subprocess.check_call(cmd, cwd=ROOT)
-    out = ROOT / "dist" / "mp4web-sidecar"
-    size_mb = out.stat().st_size / 1024 / 1024
-    print(f"[build] OK → {out}  ({size_mb:.1f} MB)")
+    # Windows: PyInstaller 产物带 .exe
+    for name in ("mp4web-sidecar", "mp4web-sidecar.exe"):
+        p = ROOT / "dist" / name
+        if p.exists():
+            size_mb = p.stat().st_size / 1024 / 1024
+            print(f"[build] OK → {p}  ({size_mb:.1f} MB)")
+            break
 
 
 if __name__ == "__main__":

@@ -145,6 +145,9 @@ class JobManager:
                 # 预设：最佳视频 + 指定语言音轨
                 fmt = f"bestvideo*+bestaudio[language={lang}]/best"
         if fmt:
+            # 具体 format_id 若不可用则自动回退（不加"/"则 yt-dlp 硬报错）
+            if "+" not in fmt and "*" not in fmt and "/" not in fmt and "best" not in fmt:
+                fmt = f"{fmt}/bestvideo*+bestaudio/best"
             ydl_opts["format"] = fmt
         # 提取音频：下载最佳音频后转码
         if req.extract_audio:

@@ -68,6 +68,7 @@ export default function App() {
     try {
       const info = await api.extract(url.trim());
       setMedia(info);
+      setFormat(config?.default_format ?? "bv*+ba/b");
       setAudioLang("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

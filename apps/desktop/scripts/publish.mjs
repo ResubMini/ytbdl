@@ -37,9 +37,9 @@ if (!existsSync(keyPath)) {
 }
 const privateKey = readFileSync(keyPath, "utf8").trim();
 
-// 带 key 构建
+// 带 key 构建（不用 pnpm 调，避免 pnpm 11 的 install-builds-check）
 console.log(`[publish] 构建 v${version}（${platformKey}，带签名）…`);
-execSync("pnpm tauri build", {
+execSync("npx --yes tauri build", {
   cwd: desktop,
   stdio: "inherit",
   env: {
