@@ -24,7 +24,7 @@ function Assert-Cmd($name) {
 }
 
 Write-Host "=== 检查工具链 ===" -ForegroundColor Cyan
-foreach ($t in @("python", "node", "pnpm", "cargo", "git")) { Assert-Cmd $t }
+foreach ($t in @("python", "node", "cargo", "git")) { Assert-Cmd $t }
 # pnpm 没装就 corepack enable
 if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
     Write-Host "  启用 pnpm…" ; corepack enable 2>$null ; Assert-Cmd pnpm

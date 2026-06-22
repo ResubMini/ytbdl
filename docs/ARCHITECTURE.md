@@ -148,7 +148,7 @@ ytbdl/
 | **P3** | Cookie 一键导入（快照）+ 多音轨 + 中文右键 + 全局错误 + 启动画面 | ✅ |
 | **P4a** | Tauri Updater 接入 + 发布脚本 + 检查更新 UI | ✅ |
 | **P4b** | Cloudflare R2 托管 + 实测自动更新 | ⬜ 待配置 |
-| **P4c** | Windows 构建（本地脚本 / GitHub Actions） | ⬜ 待完成 |
+| **P4c** | Windows 构建（本地脚本 / GitHub Actions） | 🟡 workflow 已写，待首次验证 |
 | **P4d** | 代码签名/公证（Apple $99/年） | ⬜ 待 |
 | **P4e** | 账号/收费（云端 auth + 功能开关） | ⬜ 待 |
 
@@ -159,4 +159,4 @@ ytbdl/
 - **cookie 注入**：`cookies.cookie_ydl_opts()` 解析+下载共用；browser 模式优先快照文件，无快照回退实时读浏览器。
 - **格式选择**：具体画质构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
 - **ffmpeg**：mac 用 evermeet x86_64 静态（Rosetta），win 用 BtbN win64 静态。均只链系统库，可移植。
-- **Windows 构建限制**：SSH 非交互会话下 cargo 的 libcurl DNS 线程失败，必须本地 PowerShell 跑或用 GitHub Actions。
+- **Windows 构建限制**：SSH 非交互会话下 cargo 的 libcurl DNS 线程失败，必须本地 PowerShell 跑或用 GitHub Actions。Windows Action 在 `ResubMini/ytbdl` 运行，需配置 `TAURI_SIGNING_PRIVATE_KEY` Secret。

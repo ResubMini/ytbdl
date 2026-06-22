@@ -79,6 +79,11 @@ cd E:\ytb\ytbdl
 powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 ```
 
+### 打包 Windows（GitHub Actions）
+- 仓库：`ResubMini/ytbdl`（不是 `IVENWG/ytbdl`）
+- 在仓库 Secret 中添加 `TAURI_SIGNING_PRIVATE_KEY`（内容为 `src-tauri/.updater-key`）
+- Actions → Build Windows → Run workflow；完成后下载 `mp4WEB-windows` Artifact
+
 ## 4. 已完成功能
 
 ### P0-P3 ✅
@@ -106,11 +111,11 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 
 ### 🔴 高优先级
 1. **Cookie 自动刷新未实现**：用户决定走「快照 + 提醒刷新」。需在 sidecar 启动时自动重新导入 cookie（钥匙串已「始终允许」，静默）。位置：`backend/app/main.py` lifespan 里调 `cookies.import_from_browser()`。
-2. **Windows 构建未完成**：Win 机器 SSH 会话下 libcurl 的 `getaddrinfo()` 线程失败（非交互会话 bug）。**解决**：用户在 Win 本地 PowerShell 跑 `apps\desktop\scripts\build-windows.ps1`（交互会话正常）。或转 GitHub Actions。
+2. **Windows 构建待验证**：已添加手动触发的 `.github/workflows/build-windows.yml`，需在 `ResubMini/ytbdl` 配置 `TAURI_SIGNING_PRIVATE_KEY` 后跑首次构建。Win 本地 PowerShell 脚本仍可作备用。
 3. **Cloudflare R2 未配置**：updater 端点 `update.mp4web.com/latest.json` 还没托管。用户需建 R2 bucket + 绑定域名 + 上传 dist-publish/ 里的 latest.json + .tar.gz。
 
 ### 🟡 中优先级
-4. **GitHub Actions workflow 未写**：双平台构建（mac + win），发版自动化。额度：免费 2000 分钟/月，每次发版 mac 15 分 + win 40 分（Win 2 倍计费）。
+4. **macOS GitHub Actions workflow 未写**：Windows workflow 已写；mac 构建和发版上传仍未自动化。
 5. **代码签名/公证**：未签名 .app 双击会报「未验证」。需 Apple 开发者账号 $99/年 + `tauri build` 配 codesigning。
 6. **启动慢优化**：sidecar import yt-dlp 慢（~5s dev / ~15s 打包因 PyInstaller 解包）。可改 PyInstaller onedir（免解包）或 yt-dlp 懒加载。
 
@@ -154,7 +159,7 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 
 1. 改 `tauri.conf.json` 的 `version`（如 1.0.1）。
 2. mac：`node apps/desktop/scripts/publish.mjs` → dist-publish/ 出 mac 产物。
-3. win：Win 本地跑 `build-windows.ps1` → dist-publish/ 出 win 产物。
+3. win：在 `ResubMini/ytbdl` 手动运行 Build Windows Action（或本地跑 `build-windows.ps1`）→ 下载 Artifact。
 4. 把 `latest.json` + `.tar.gz`/`-setup.exe` 上传到 Cloudflare R2（`update.mp4web.com`）。
 5. 用户 App 自动检测到新版本 → 下载安装。
 

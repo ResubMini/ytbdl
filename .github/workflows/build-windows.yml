@@ -1,0 +1,39 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Add updater signing key
+        shell: pwsh
+        env:
+          UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if (-not $env:UPDATER_KEY) { throw "Missing TAURI_SIGNING_PRIVATE_KEY secret" }
+          [IO.File]::WriteAllText("apps/desktop/src-tauri/.updater-key", $env:UPDATER_KEY)
+
+      - name: Build
+        shell: pwsh
+        run: ./apps/desktop/scripts/build-windows.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mp4WEB-windows
+          path: apps/desktop/dist-publish/
+          if-no-files-found: error
