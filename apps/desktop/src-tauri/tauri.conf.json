@@ -28,10 +28,10 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "resources": {
-      "resources/ffmpeg": "ffmpeg",
-      "resources/mp4web-sidecar": "mp4web-sidecar"
-    },
+    "resources": [
+      "resources/ffmpeg*",
+      "resources/mp4web-sidecar*"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

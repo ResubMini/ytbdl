@@ -43,8 +43,24 @@ fn dev_sidecar_command() -> Command {
 /// release：用随包分发的 PyInstaller 二进制（位于 Resources）。
 #[cfg(not(debug_assertions))]
 fn release_sidecar_command(resource_dir: &PathBuf) -> Command {
-    let bin = resource_dir.join("mp4web-sidecar");
+    let bin = resolve_resource(resource_dir, "mp4web-sidecar").unwrap_or_else(|| {
+        resource_dir.join("mp4web-sidecar")
+    });
     Command::new(bin)
+}
+
+/// 跨平台定位打包资源：兼容 root / resources/ 子目录、带不带 .exe。
+#[cfg(not(debug_assertions))]
+fn resolve_resource(resource_dir: &PathBuf, name: &str) -> Option<PathBuf> {
+    let mut candidates = vec![
+        resource_dir.join(name),
+        resource_dir.join("resources").join(name),
+    ];
+    if cfg!(windows) {
+        candidates.push(resource_dir.join(format!("{name}.exe")));
+        candidates.push(resource_dir.join("resources").join(format!("{name}.exe")));
+    }
+    candidates.into_iter().find(|p| p.exists())
 }
 
 fn wait_ready(port: u16) {
@@ -93,8 +109,7 @@ pub fn run() {
             // release：指向打包的 ffmpeg + 用户数据目录（可写）
             #[cfg(not(debug_assertions))]
             {
-                let ffmpeg = resource_dir.join("ffmpeg");
-                if ffmpeg.exists() {
+                if let Some(ffmpeg) = resolve_resource(&resource_dir, "ffmpeg") {
                     cmd.env("SIDECAR_FFMPEG", &ffmpeg);
                 }
                 if let Ok(data_dir) = app.path().app_data_dir() {
