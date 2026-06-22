@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+*.spec.bak
+
+# Node / Tauri
+node_modules/
+apps/desktop/src-tauri/target/
+apps/desktop/dist/
+
+# App runtime data
+engines/
+*.db
+config.json
+
+# 打包产物（大二进制，不入库）
+apps/desktop/src-tauri/resources/
+apps/backend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# 上游源码参考克隆（不属于本项目）
+yt-dlp/
