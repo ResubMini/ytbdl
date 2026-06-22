@@ -173,8 +173,7 @@ class JobManager:
 
         self._set_status(job_id, DOWNLOADING)
         try:
-            with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(req.url, download=True)
+            info = self._download_with_fallback(req.url, ydl_opts, req.extract_audio)
             if self._cancel_flags.get(job_id):
                 self._set_status(job_id, CANCELLED)
                 return
@@ -197,6 +196,20 @@ class JobManager:
 
             msg, _ = friendly_error(f"{type(e).__name__}: {e}")
             self._fail(job_id, msg)
+
+    @staticmethod
+    def _download_with_fallback(url: str, ydl_opts: dict, extract_audio: bool) -> dict:
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                return ydl.extract_info(url, download=True)
+        except DownloadError as e:
+            from .errors import is_format_unavailable
+
+            fallback = "ba/b" if extract_audio else "bv*+ba/b"
+            if not is_format_unavailable(str(e)) or ydl_opts.get("format") == fallback:
+                raise
+            with YoutubeDL({**ydl_opts, "format": fallback}) as ydl:
+                return ydl.extract_info(url, download=True)
 
     # ---------- 钩子 ----------
     def _on_download_progress(self, job_id: str, d: dict) -> None:

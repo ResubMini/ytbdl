@@ -32,9 +32,16 @@ def friendly_error(raw: str) -> tuple[str, bool]:
 
     # 注意：bot-check 错误里有时带 "format" 字样，必须排在 cookie 判断之后
     if _FORMAT_RE.search(raw):
-        return ("所选画质该视频不支持，请改选「自动最佳画质」后重试。", False)
+        return (
+            "无法取得该视频的可下载画质，请重新解析；若仍失败，请刷新登录信息。",
+            False,
+        )
 
     cleaned = _URL_RE.sub("", raw)  # 去掉链接
     cleaned = _ERR_PREFIX_RE.sub("", cleaned)  # 去掉 ERROR: 前缀
     cleaned = cleaned.strip().strip("：:").strip()
     return (cleaned[:300] or "下载失败", False)
+
+
+def is_format_unavailable(raw: str) -> bool:
+    return bool(_FORMAT_RE.search(raw))

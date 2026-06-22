@@ -3,13 +3,19 @@
 // 2. 把 {baseUrl, token} 注入前端（initialization_script，React 加载前生效）
 // 3. 应用退出时清理 sidecar 子进程
 
-use std::net::{TcpListener, TcpStream};
+#[cfg(not(debug_assertions))]
+use std::fs::{create_dir_all, OpenOptions};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
+#[cfg(not(debug_assertions))]
 use tauri::Manager;
 use tauri::{RunEvent, WebviewUrl, WebviewWindowBuilder};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 fn free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
@@ -43,9 +49,8 @@ fn dev_sidecar_command() -> Command {
 /// release：用随包分发的 PyInstaller 二进制（位于 Resources）。
 #[cfg(not(debug_assertions))]
 fn release_sidecar_command(resource_dir: &PathBuf) -> Command {
-    let bin = resolve_resource(resource_dir, "mp4web-sidecar").unwrap_or_else(|| {
-        resource_dir.join("mp4web-sidecar")
-    });
+    let bin = resolve_resource(resource_dir, "mp4web-sidecar")
+        .unwrap_or_else(|| resource_dir.join("mp4web-sidecar"));
     Command::new(bin)
 }
 
@@ -61,18 +66,6 @@ fn resolve_resource(resource_dir: &PathBuf, name: &str) -> Option<PathBuf> {
         candidates.push(resource_dir.join("resources").join(format!("{name}.exe")));
     }
     candidates.into_iter().find(|p| p.exists())
-}
-
-fn wait_ready(port: u16) {
-    let addr: std::net::SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
-    let deadline = Instant::now() + Duration::from_secs(60);
-    while Instant::now() < deadline {
-        if TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok() {
-            return;
-        }
-        std::thread::sleep(Duration::from_millis(200));
-    }
-    eprintln!("[mp4WEB] 警告：sidecar 60s 内未就绪 (port {})", port);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -92,6 +85,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .setup(move |app| {
             // ── 解析资源路径（release 用打包的 sidecar + ffmpeg）──
+            #[cfg(not(debug_assertions))]
             let resource_dir = app
                 .path()
                 .resource_dir()
@@ -114,10 +108,29 @@ pub fn run() {
                 }
                 if let Ok(data_dir) = app.path().app_data_dir() {
                     cmd.env("SIDECAR_DATA_DIR", &data_dir);
+                    let _ = create_dir_all(&data_dir);
+                    if let Ok(log) = OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .truncate(true)
+                        .open(data_dir.join("sidecar.log"))
+                    {
+                        if let Ok(stderr) = log.try_clone() {
+                            cmd.stdout(Stdio::from(log));
+                            cmd.stderr(Stdio::from(stderr));
+                        }
+                    }
                 }
+
+                #[cfg(windows)]
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
             }
+
+            #[cfg(debug_assertions)]
+            {
             cmd.stdout(Stdio::inherit());
             cmd.stderr(Stdio::inherit());
+            }
 
             match cmd.spawn() {
                 Ok(c) => {

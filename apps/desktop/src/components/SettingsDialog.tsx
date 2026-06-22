@@ -225,12 +225,12 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
             </div>
           )}
 
-          {/* 登录信息（一键导入快照）*/}
+          {/* 登录信息 */}
           <div className="space-y-3 border-t pt-4">
             <div>
               <Label>登录信息</Label>
               <p className="mt-1 text-xs text-muted-foreground">
-                某些网站（如 YouTube）需要登录才能下载。从已登录的浏览器一键导入即可。
+                某些网站（如 YouTube）需要登录。程序会在解析和下载时读取浏览器的最新登录信息。
               </p>
             </div>
 
@@ -294,7 +294,7 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
                     ) : (
                       <LogIn className="size-4" />
                     )}
-                    {config.cookie_imported_at ? "重新导入" : "导入登录信息"}
+                    {config.cookie_imported_at ? "重新验证" : "验证并使用"}
                   </Button>
                   {importMsg && (
                     <span
@@ -310,13 +310,13 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
 
                 {!importMsg && config.cookie_imported_at > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    ✓ 已导入 {config.cookie_imported_count} 条登录信息 ·{" "}
+                    ✓ 已连接，检测到 {config.cookie_imported_count} 条 YouTube 登录信息 ·{" "}
                     {new Date(config.cookie_imported_at * 1000).toLocaleString()}
                   </p>
                 )}
 
                 <p className="text-xs text-muted-foreground/70">
-                  提示：导入后即使浏览器关闭也可用；若日后失效，重新导入即可。
+                  提示：普通浏览器 Cookie 会轮换，因此使用时会读取最新值。若读取为 0，请明确选择已登录的账户。
                 </p>
               </>
             ) : (
@@ -334,6 +334,9 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
                 <Label className="text-xs text-muted-foreground">
                   使用 cookies.txt 文件（Netscape 格式）
                 </Label>
+                <p className="text-xs text-muted-foreground/70">
+                  需要长期固定登录时，可按 yt-dlp 官方方法从独立无痕会话导出，导出后立即关闭该会话。
+                </p>
                 <div className="flex gap-2">
                   <Input
                     value={draft.cookie_file ?? config.cookie_file}

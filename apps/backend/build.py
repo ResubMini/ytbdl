@@ -44,6 +44,8 @@ def main() -> None:
         "--noconfirm",
         "run.py",
     ]
+    if sys.platform == "win32":
+        cmd.insert(-1, "--noconsole")
     print("[build] running PyInstaller...")
     subprocess.check_call(cmd, cwd=ROOT)
     # Windows: PyInstaller 产物带 .exe

@@ -80,19 +80,32 @@ def profiles(browser: str) -> list[dict]:
     return []  # safari/opera：无多 profile
 
 
-def _chromium_profiles(browser: str) -> list[dict]:
+def resolve_profile(browser: str, profile: str | None) -> str:
+    """未指定 Chromium Profile 时，使用浏览器记录的 last_used。"""
+    if profile or browser not in _CHROMIUM_DIRS:
+        return profile or ""
+    data = _chromium_local_state(browser)
+    return data.get("profile", {}).get("last_used", "") if data else ""
+
+
+def _chromium_local_state(browser: str) -> dict:
     key = _PLATFORM_KEY.get(platform.system(), "linux")
     rel = _CHROMIUM_DIRS.get(browser, {}).get(key)
     if not rel:
-        return []
-    local_state = _platform_root() / rel / "Local State"
-    if not local_state.exists():
-        return []
+        return {}
+    path = _platform_root() / rel / "Local State"
+    if not path.exists():
+        return {}
     try:
-        data = json.loads(local_state.read_text("utf-8"))
+        return json.loads(path.read_text("utf-8"))
     except Exception:
-        return []
+        return {}
+
+
+def _chromium_profiles(browser: str) -> list[dict]:
+    data = _chromium_local_state(browser)
     cache = data.get("profile", {}).get("info_cache", {}) or {}
+    last_used = data.get("profile", {}).get("last_used", "")
     out = [
         {
             "folder": folder,
@@ -101,8 +114,7 @@ def _chromium_profiles(browser: str) -> list[dict]:
         }
         for folder, info in cache.items()
     ]
-    # Default 排前，其余按 folder
-    out.sort(key=lambda x: (x["folder"] != "Default", x["folder"]))
+    out.sort(key=lambda x: (x["folder"] != last_used, x["folder"] != "Default", x["folder"]))
     return out
 
 
@@ -132,8 +144,10 @@ def _firefox_profiles() -> list[dict]:
         path = cp.get(section, "Path", fallback="")
         is_default = cp.getboolean(section, "Default", fallback=False)
         if name:
-            out.append({"folder": name, "name": name, "email": ""})
-    out.sort(key=lambda x: not is_default)
+            out.append({"folder": name, "name": name, "email": "", "is_default": is_default})
+    out.sort(key=lambda x: not x["is_default"])
+    for item in out:
+        item.pop("is_default")
     return out
 
 def _installed_macos() -> list[str]:

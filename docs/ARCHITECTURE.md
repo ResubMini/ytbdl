@@ -33,7 +33,7 @@
 ┌───────────────────────▼─────────────────────────────────────┐
 │ ② 协议层  Python sidecar (FastAPI + uvicorn, PyInstaller)    │
 │    /v1/* REST + WebSocket /v1/events                         │
-│    下载队列 / 并发 / cookie 快照 / 友好错误                   │
+│    下载队列 / 并发 / 浏览器 cookie / 友好错误                 │
 │    适配层：yt-dlp 字段 ⇄ /v1/* 协议（吸收上游变更）           │
 └───────────────────────┬─────────────────────────────────────┘
                         │ import（随包分发，无 engines/ 热替换）
@@ -75,7 +75,7 @@ GET    /v1/config              → 读取设置
 PUT    /v1/config              → 更新设置（下载目录/并发/格式/cookie）
 GET    /v1/cookies/browsers    → 探测已装浏览器
 GET    /v1/cookies/profiles    → 枚举浏览器 profile
-POST   /v1/cookies/import      → 一键导入浏览器 cookie 快照
+POST   /v1/cookies/import      → 验证浏览器/Profile 登录信息
 ```
 
 **WebSocket `/v1/events`**
@@ -108,14 +108,11 @@ POST   /v1/cookies/import      → 一键导入浏览器 cookie 快照
 
 ## 7. Cookie 方案（解决 YouTube bot-check）
 
-**快照导入**（用户友好）：
-- 设置 → 登录信息 → 选浏览器 + profile → 点「导入登录信息」
-- 后端抽浏览器 cookie 存成快照文件（`~/.ytbdl/cookies/<browser>.txt`）
-- 下载时用快照（不实时读浏览器），避开 YouTube 对打开标签页的 cookie 轮换
-
-**已知限制**：快照会过期（YouTube cookie 寿命数天到数周）。
-- 解法：设置里「重新导入」刷新。
-- 待实现：sidecar 启动时自动刷新快照（钥匙串已「始终允许」，静默）。
+- 普通浏览器登录：设置中选择浏览器 + Profile 并验证；解析和下载时实时读取最新 cookie，跟上 YouTube 对打开标签页的 cookie 轮换。
+- 未明确选择 Chromium Profile 时，使用浏览器 `Local State` 的 `last_used`，避免 yt-dlp 按最新 Cookie 数据库误选其他账户。
+- 长期固定登录：高级选项读取 `cookies.txt`。按 yt-dlp 官方建议，应从独立无痕会话导出后立即关闭该会话；`cookies-from-browser` 无法读取这类无痕会话。
+- 读取到 0 条 YouTube cookie 时视为失败，不保存配置。
+- 旧版曾保存包含全部站点 cookie 的快照；新版启动时删除这些遗留明文文件。
 
 ## 8. 仓库结构
 
@@ -145,7 +142,7 @@ ytbdl/
 | **P0** | 端到端闭环：壳拉起 sidecar → 解析 → 下载 → WebSocket 进度 | ✅ |
 | **P1** | 格式选择器、队列/并发、设置、停止/重试/删除、音频提取、UI 精修 | ✅ |
 | **P2** | PyInstaller 打包 sidecar + 自带 ffmpeg + macOS .app 出包 | ✅ |
-| **P3** | Cookie 一键导入（快照）+ 多音轨 + 中文右键 + 全局错误 + 启动画面 | ✅ |
+| **P3** | 浏览器 Cookie + 多音轨 + 中文右键 + 全局错误 + 启动画面 | ✅ |
 | **P4a** | Tauri Updater 接入 + 发布脚本 + 检查更新 UI | ✅ |
 | **P4b** | Cloudflare R2 托管 + 实测自动更新 | ⬜ 待配置 |
 | **P4c** | Windows 构建（本地脚本 / GitHub Actions） | ✅ Action 已实测出包 |
@@ -156,7 +153,7 @@ ytbdl/
 
 - **sidecar 注入**：Rust 生成随机 port+token，通过 `initialization_script` 设 `window.__SIDECAR__`（React 加载前生效）。
 - **启动画面**：Rust 不再 `wait_ready`，窗口秒开显示 Splash，前端轮询 `health` 就绪后切主界面。
-- **cookie 注入**：`cookies.cookie_ydl_opts()` 解析+下载共用；browser 模式优先快照文件，无快照回退实时读浏览器。
+- **cookie 注入**：`cookies.cookie_ydl_opts()` 解析+下载共用；browser 模式每次读取所选 Profile 的最新值，file 模式读取用户提供的固定 `cookies.txt`。
 - **格式选择**：具体画质构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
 - **ffmpeg**：mac 用 evermeet x86_64 静态（Rosetta），win 用 BtbN win64 静态。均只链系统库，可移植。
 - **Windows 构建限制**：SSH 非交互会话下 cargo 的 libcurl DNS 线程失败，必须本地 PowerShell 跑或用 GitHub Actions。Windows Action 在 `ResubMini/ytbdl` 运行，需配置 `TAURI_SIGNING_PRIVATE_KEY` Secret。

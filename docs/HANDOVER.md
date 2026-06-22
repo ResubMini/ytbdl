@@ -41,7 +41,7 @@ ytbdl/
 │       │   ├── main.py          # FastAPI 路由 + 全局异常处理（CORS 安全）
 │       │   ├── jobs.py          # 下载任务管理（队列/并发/取消/重试/格式构造）
 │       │   ├── extract.py       # 元数据提取
-│       │   ├── cookies.py       # cookie 快照导入 + 注入
+│       │   ├── cookies.py       # 浏览器 cookie 验证 + 注入
 │       │   ├── browsers.py      # 浏览器/profile 探测
 │       │   ├── config.py        # 持久化设置（~/.ytbdl/config.json）
 │       │   ├── errors.py        # 友好错误转译
@@ -91,7 +91,7 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 - 格式选择器（预设 + 具体画质，**自动补音频 + 回退**）
 - 音频提取（mp3/m4a/flac 等，需 ffmpeg）
 - 多音轨语言选择（YouTube 多语言配音）
-- Cookie 一键导入（快照，根治轮换）+ 浏览器/profile 探测
+- 浏览器 Cookie 验证 + 实时读取最新值 + Profile 探测
 - 设置持久化（下载目录/并发/默认格式/音频）
 - 中文右键菜单（自定义 ContextMenuInput，禁用原生英文菜单）
 - 深色模式、bot-check 引导横幅
@@ -110,9 +110,8 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 ## 5. 待办（按优先级）
 
 ### 🔴 高优先级
-1. **Cookie 自动刷新未实现**：用户决定走「快照 + 提醒刷新」。需在 sidecar 启动时自动重新导入 cookie（钥匙串已「始终允许」，静默）。位置：`backend/app/main.py` lifespan 里调 `cookies.import_from_browser()`。
-2. **Windows 构建已打通**：`ResubMini/ytbdl` 的手动 Build Windows Action 已实测成功，产出安装包和 `latest.json` Artifact。Win 本地 PowerShell 脚本仍可作备用。
-3. **Cloudflare R2 未配置**：updater 端点 `update.mp4web.com/latest.json` 还没托管。用户需建 R2 bucket + 绑定域名 + 上传 dist-publish/ 里的 latest.json + .tar.gz。
+1. **Windows 构建已打通**：`ResubMini/ytbdl` 的手动 Build Windows Action 已实测成功，产出安装包和 `latest.json` Artifact。Win 本地 PowerShell 脚本仍可作备用。
+2. **Cloudflare R2 未配置**：updater 端点 `update.mp4web.com/latest.json` 还没托管。用户需建 R2 bucket + 绑定域名 + 上传 dist-publish/ 里的 latest.json + .tar.gz。
 
 ### 🟡 中优先级
 4. **macOS GitHub Actions workflow 未写**：Windows workflow 已写；mac 构建和发版上传仍未自动化。
@@ -125,12 +124,11 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 
 ## 6. 关键已知问题
 
-### Cookie 快照会过期
-- 现象：下载报「登录信息已失效」（friendly_error 已转中文提示）。
-- 原因：YouTube 登录 cookie 寿命短（几天到几周），Chrome 开着会轮换。
-- 临时解法：设置 → 登录信息 → 重新点「导入登录信息」。
-- 根治（待实现）：sidecar 启动时自动刷新快照（见待办 #1）。
-- 彻底解法：用专用 Chrome profile（不日常浏览）登录 YouTube，cookie 不被轮换。但对小白复杂，暂不做。
+### YouTube Cookie 会轮换
+- 普通浏览器模式在每次解析和下载时读取所选 Profile 的最新 cookie；验证为 0 条时不启用。
+- 若未明确选账户，使用 Chromium `Local State.profile.last_used`，避免误读其他 Profile。
+- 要获得不会被浏览器标签页轮换的固定 cookie，需按 yt-dlp 官方方法从独立无痕会话导出 `cookies.txt`，随后立即关闭且不再打开该会话。
+- 新版启动时会删除旧版遗留的全浏览器 cookie 明文快照。
 
 ### Windows 必须本地构建
 - SSH 非交互会话下 cargo 的 libcurl DNS 线程初始化失败（`getaddrinfo() thread failed to start`）。
@@ -143,7 +141,7 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 ## 7. 关键技术点备忘
 
 - **sidecar 端口/token**：每次启动随机生成，Rust 通过 `initialization_script` 注入 `window.__SIDECAR__`（React 加载前生效，无竞态）。
-- **cookie 注入**：`cookies.cookie_ydl_opts()` 解析和下载共用；browser 模式优先用快照文件（`~/.ytbdl/cookies/<browser>.txt`），无快照回退实时读浏览器。
+- **cookie 注入**：`cookies.cookie_ydl_opts()` 解析和下载共用；browser 模式实时读取所选 Profile，file 模式使用固定 `cookies.txt`。
 - **格式选择**：用户选具体画质时，后端构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
 - **全局错误**：`main.py` 的 `@app.exception_handler(Exception)` 在最外层（CORS 中间件之外），**必须自补 CORS 头**，否则前端只见 `load failed`。
 - **updater**：公钥在 `tauri.conf.json plugins.updater.pubkey`；私钥在 `src-tauri/.updater-key`（gitignored，**丢失就再也无法推更新**，务必备份）。

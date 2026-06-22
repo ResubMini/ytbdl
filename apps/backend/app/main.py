@@ -27,6 +27,9 @@ from .schemas import ConfigUpdate, DownloadRequest, DownloadResponse
 def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        from .cookies import cleanup_legacy_snapshots
+
+        cleanup_legacy_snapshots()
         hub.bind_loop(asyncio.get_running_loop())
         yield
 
@@ -118,7 +121,7 @@ def create_app() -> FastAPI:
             settings.update(
                 cookie_source="browser",
                 cookie_browser=browser,
-                cookie_profile=profile,
+                cookie_profile=result.get("profile", profile),
                 cookie_imported_at=int(_time.time()),
                 cookie_imported_count=result.get("youtube_count", 0),
             )
