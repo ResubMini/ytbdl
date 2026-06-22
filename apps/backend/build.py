@@ -44,8 +44,6 @@ def main() -> None:
         "--noconfirm",
         "run.py",
     ]
-    if sys.platform == "win32":
-        cmd.insert(-1, "--noconsole")
     print("[build] running PyInstaller...")
     subprocess.check_call(cmd, cwd=ROOT)
     # Windows: PyInstaller 产物带 .exe
@@ -53,7 +51,7 @@ def main() -> None:
         p = ROOT / "dist" / name
         if p.exists():
             size_mb = p.stat().st_size / 1024 / 1024
-            print(f"[build] OK → {p}  ({size_mb:.1f} MB)")
+            print(f"[build] OK: {p}  ({size_mb:.1f} MB)")
             break
 
 

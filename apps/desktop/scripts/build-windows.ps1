@@ -43,13 +43,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -q --upgrade pip
 .\.venv\Scripts\pip.exe install -q -r requirements.txt pyinstaller
 .\.venv\Scripts\python.exe build.py
+if ($LASTEXITCODE -ne 0) { throw "sidecar 构建失败" }
 if (-not (Test-Path "dist\mp4web-sidecar.exe")) { Write-Host "✗ sidecar 打包失败" -ForegroundColor Red; exit 1 }
 
 Write-Host "=== 验证 sidecar 可启动 ===" -ForegroundColor Cyan
 $env:SIDECAR_HOST = "127.0.0.1"
 $env:SIDECAR_PORT = "18765"
 $env:SIDECAR_TOKEN = "build-smoke-test"
-$sidecar = Start-Process "dist\mp4web-sidecar.exe" -PassThru -WindowStyle Hidden
+$sidecarOut = Join-Path $env:TEMP "mp4web-sidecar.out.log"
+$sidecarErr = Join-Path $env:TEMP "mp4web-sidecar.err.log"
+$sidecar = Start-Process "dist\mp4web-sidecar.exe" -PassThru -WindowStyle Hidden -RedirectStandardOutput $sidecarOut -RedirectStandardError $sidecarErr
 try {
     $ready = $false
     foreach ($i in 1..120) {
@@ -60,7 +63,10 @@ try {
             break
         } catch { Start-Sleep -Milliseconds 500 }
     }
-    if (-not $ready) { throw "sidecar 60 秒内未就绪" }
+    if (-not $ready) {
+        Get-Content $sidecarOut, $sidecarErr -ErrorAction SilentlyContinue
+        throw "sidecar 60 秒内未就绪"
+    }
 } finally {
     Stop-Process -Id $sidecar.Id -Force -ErrorAction SilentlyContinue
     Remove-Item Env:SIDECAR_HOST, Env:SIDECAR_PORT, Env:SIDECAR_TOKEN -ErrorAction SilentlyContinue
