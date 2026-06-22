@@ -16,6 +16,7 @@ import { initJobs, useJobs } from "@/store";
 import { MediaPreview } from "@/components/MediaPreview";
 import { JobList } from "@/components/JobList";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { Splash } from "@/components/Splash";
 
 export default function App() {
   const [url, setUrl] = useState("");
@@ -30,6 +31,7 @@ export default function App() {
   const [extractAudio, setExtractAudio] = useState(false);
   const [audioFormat, setAudioFormat] = useState("mp3");
   const [audioLang, setAudioLang] = useState("");
+  const [ready, setReady] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(
     () =>
       (localStorage.getItem("theme") as "light" | "dark") ??
@@ -44,8 +46,9 @@ export default function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // WS 订阅 + 引擎信息 + 配置
+  // WS 订阅 + 引擎信息 + 配置（sidecar 就绪后才连）
   useEffect(() => {
+    if (!ready) return;
     const cleanup = initJobs();
     api.health().then(setEngine).catch(() => {});
     api
@@ -58,7 +61,7 @@ export default function App() {
       })
       .catch(() => {});
     return cleanup;
-  }, []);
+  }, [ready]);
 
   async function handleAnalyze() {
     if (!url.trim()) return;
@@ -68,8 +71,9 @@ export default function App() {
     try {
       const info = await api.extract(url.trim());
       setMedia(info);
-      setFormat(config?.default_format ?? "bv*+ba/b");
       setAudioLang("");
+      // 重置画质：旧视频的 format_id 在新视频上可能不存在
+      setFormat(config?.default_format || "bv*+ba/b");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -118,6 +122,10 @@ export default function App() {
         /sign in to confirm|not a bot|cookie|登录|验证|bot/i.test(j.error ?? ""),
     ),
   );
+
+  if (!ready) {
+    return <Splash onReady={() => setReady(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

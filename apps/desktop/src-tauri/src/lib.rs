@@ -123,7 +123,7 @@ pub fn run() {
                 Ok(c) => {
                     *child.lock().unwrap() = Some(c);
                     println!(
-                        "[mp4WEB] sidecar 已启动：http://127.0.0.1:{} （等待就绪…）",
+                        "[mp4WEB] sidecar 后台启动中：http://127.0.0.1:{}",
                         port
                     );
                 }
@@ -131,7 +131,8 @@ pub fn run() {
                     eprintln!("[mp4WEB] 启动 sidecar 失败：{e}");
                 }
             }
-            wait_ready(port);
+            // 不在这里 wait_ready：窗口立即打开显示启动画面，
+            // 由前端 splash 轮询 health 直到 sidecar 就绪。
 
             // 注入到前端：在 React 任何代码加载前执行，无竞态
             let init_script = format!(

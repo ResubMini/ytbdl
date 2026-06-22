@@ -144,10 +144,10 @@ class JobManager:
             else:
                 # 预设：最佳视频 + 指定语言音轨
                 fmt = f"bestvideo*+bestaudio[language={lang}]/best"
+        elif fmt and "+" not in fmt and "/" not in fmt and "best" not in fmt:
+            # 用户选了具体视频格式_id（纯视频DASH流）：补最佳音频 + 回退，避免没声音/格式不存在
+            fmt = f"{fmt}+bestaudio/best"
         if fmt:
-            # 具体 format_id 若不可用则自动回退（不加"/"则 yt-dlp 硬报错）
-            if "+" not in fmt and "*" not in fmt and "/" not in fmt and "best" not in fmt:
-                fmt = f"{fmt}/bestvideo*+bestaudio/best"
             ydl_opts["format"] = fmt
         # 提取音频：下载最佳音频后转码
         if req.extract_audio:
