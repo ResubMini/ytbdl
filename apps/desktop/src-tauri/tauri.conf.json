@@ -1,13 +1,22 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "mp4WEB",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.ytbdl.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY2MDhCQTlDRDlGRTU2Q0UKUldUT1Z2N1puTG9JOWttNFBTdG4wYjYzVmJXVmNtbHVFMUFuUWd0RGtPUVNsR0ovZkxJQWNtWDMK",
+      "endpoints": ["https://update.mp4web.com/latest.json"],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   },
   "app": {
     "windows": [],
@@ -18,6 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "resources": {
       "resources/ffmpeg": "ffmpeg",
       "resources/mp4web-sidecar": "mp4web-sidecar"

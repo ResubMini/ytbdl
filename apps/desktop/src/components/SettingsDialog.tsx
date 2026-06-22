@@ -22,6 +22,7 @@ import {
 import { api, type AppConfig, type BrowserInfo, type ProfileInfo } from "@/lib/api";
 import { pickCookieFile, pickFolder } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
+import { UpdateSection } from "@/components/UpdateSection";
 
 interface Props {
   open: boolean;
@@ -137,6 +138,8 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          <UpdateSection />
+
           {/* 下载目录 */}
           <div className="space-y-2">
             <Label>下载目录</Label>

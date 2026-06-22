@@ -22,6 +22,12 @@ config.json
 apps/desktop/src-tauri/resources/
 apps/backend/dist/
 
+# updater 签名密钥（绝不入库！丢失就无法再推更新）
+apps/desktop/src-tauri/.updater-key*
+
+# 发布产物（构建生成，不入库）
+apps/desktop/dist-publish/
+
 # OS
 .DS_Store
 Thumbs.db
