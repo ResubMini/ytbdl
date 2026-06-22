@@ -41,7 +41,7 @@ ytbdl/
 │       │   ├── main.py          # FastAPI 路由 + 全局异常处理（CORS 安全）
 │       │   ├── jobs.py          # 下载任务管理（队列/并发/取消/重试/格式构造）
 │       │   ├── extract.py       # 元数据提取
-│       │   ├── cookies.py       # 浏览器 cookie 验证 + 注入
+│       │   ├── cookies.py       # 自动选 Profile + 单次内存 Cookie 注入
 │       │   ├── browsers.py      # 浏览器/profile 探测
 │       │   ├── config.py        # 持久化设置（~/.ytbdl/config.json）
 │       │   ├── errors.py        # 友好错误转译
@@ -91,7 +91,7 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 - 格式选择器（预设 + 具体画质，**自动补音频 + 回退**）
 - 音频提取（mp3/m4a/flac 等，需 ffmpeg）
 - 多音轨语言选择（YouTube 多语言配音）
-- 浏览器 Cookie 验证 + 实时读取最新值 + Profile 探测
+- 浏览器 Cookie 自动选账户 + 单次内存读取 + Profile 锁定
 - 设置持久化（下载目录/并发/默认格式/音频）
 - 中文右键菜单（自定义 ContextMenuInput，禁用原生英文菜单）
 - 深色模式、bot-check 引导横幅
@@ -125,8 +125,8 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 ## 6. 关键已知问题
 
 ### YouTube Cookie 会轮换
-- 普通浏览器模式在每次解析和下载时读取所选 Profile 的最新 cookie；验证为 0 条时不启用。
-- 若未明确选账户，使用 Chromium `Local State.profile.last_used`，避免误读其他 Profile。
+- 普通浏览器模式每次解析和下载只读取一次最新 cookie，不写明文快照。
+- 自动模式扫描 Profile 并选择实际含 YouTube Cookie 最多的账户；明确锁定的账户读到 0 条时返回具体错误。
 - 要获得不会被浏览器标签页轮换的固定 cookie，需按 yt-dlp 官方方法从独立无痕会话导出 `cookies.txt`，随后立即关闭且不再打开该会话。
 - 新版启动时会删除旧版遗留的全浏览器 cookie 明文快照。
 
@@ -141,7 +141,8 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 ## 7. 关键技术点备忘
 
 - **sidecar 端口/token**：每次启动随机生成，Rust 通过 `initialization_script` 注入 `window.__SIDECAR__`（React 加载前生效，无竞态）。
-- **cookie 注入**：`cookies.cookie_ydl_opts()` 解析和下载共用；browser 模式实时读取所选 Profile，file 模式使用固定 `cookies.txt`。
+- **cookie 注入**：browser 模式将一次读取的 CookieJar 直接注入 yt-dlp 内存；file 模式使用固定 `cookies.txt`。
+- **YouTube 格式解析**：必须同时打包 `yt-dlp-ejs` 和 Deno；缺少任一项会导致格式残缺或不可下载。
 - **格式选择**：用户选具体画质时，后端构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
 - **全局错误**：`main.py` 的 `@app.exception_handler(Exception)` 在最外层（CORS 中间件之外），**必须自补 CORS 头**，否则前端只见 `load failed`。
 - **updater**：公钥在 `tauri.conf.json plugins.updater.pubkey`；私钥在 `src-tauri/.updater-key`（gitignored，**丢失就再也无法推更新**，务必备份）。

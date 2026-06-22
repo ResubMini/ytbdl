@@ -80,14 +80,6 @@ def profiles(browser: str) -> list[dict]:
     return []  # safari/opera：无多 profile
 
 
-def resolve_profile(browser: str, profile: str | None) -> str:
-    """未指定 Chromium Profile 时，使用浏览器记录的 last_used。"""
-    if profile or browser not in _CHROMIUM_DIRS:
-        return profile or ""
-    data = _chromium_local_state(browser)
-    return data.get("profile", {}).get("last_used", "") if data else ""
-
-
 def _chromium_local_state(browser: str) -> dict:
     key = _PLATFORM_KEY.get(platform.system(), "linux")
     rel = _CHROMIUM_DIRS.get(browser, {}).get(key)

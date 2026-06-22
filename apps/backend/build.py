@@ -26,6 +26,8 @@ def main() -> None:
         # yt-dlp：收集全部（含数百个 extractor + 自带的 PyInstaller hook）
         "--collect-all",
         "yt_dlp",
+        "--collect-all",
+        "yt_dlp_ejs",
         # 本地 app 包：确保所有子模块入包
         "--collect-submodules",
         "app",

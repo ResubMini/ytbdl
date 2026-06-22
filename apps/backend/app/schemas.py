@@ -61,6 +61,7 @@ class ConfigUpdate(BaseModel):
     cookie_source: str | None = None
     cookie_browser: str | None = None
     cookie_profile: str | None = None
+    cookie_profile_auto: bool | None = None
     cookie_file: str | None = None
 
 

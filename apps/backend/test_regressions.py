@@ -1,11 +1,12 @@
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from yt_dlp.utils import DownloadError
 
-from app import browsers, cookies
+from app import cookies
 from app.jobs import JobManager
 
 
@@ -15,6 +16,10 @@ class EmptyJar:
 
     def __iter__(self):
         return iter(())
+
+
+class CookieJar(list):
+    pass
 
 
 class FakeYDL:
@@ -50,19 +55,25 @@ class RegressionTests(unittest.TestCase):
             finally:
                 cookies.DATA_DIR = old_data_dir
 
-    def test_chromium_defaults_to_last_used_profile(self):
-        state = {"profile": {"last_used": "Profile 2"}}
-        with patch.object(browsers, "_chromium_local_state", return_value=state):
-            self.assertEqual(browsers.resolve_profile("chrome", ""), "Profile 2")
-
     def test_empty_cookie_import_is_not_accepted(self):
         with (
-            patch.object(cookies, "resolve_profile", return_value="Profile 1"),
+            patch.object(cookies, "profiles", return_value=[{"folder": "Profile 1"}]),
             patch.object(cookies, "extract_cookies_from_browser", return_value=EmptyJar()) as extract,
         ):
             result = cookies.import_from_browser("chrome", "")
         self.assertFalse(result["ok"])
         extract.assert_called_once_with("chrome", profile="Profile 1")
+
+    def test_auto_profile_uses_account_with_youtube_cookies(self):
+        empty = CookieJar([SimpleNamespace(domain=".google.com")])
+        logged_in = CookieJar([SimpleNamespace(domain=".youtube.com") for _ in range(3)])
+        with (
+            patch.object(cookies, "profiles", return_value=[{"folder": "A"}, {"folder": "B"}]),
+            patch.object(cookies, "extract_cookies_from_browser", side_effect=[empty, logged_in]),
+        ):
+            result = cookies.import_from_browser("chrome", "")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["resolved_profile"], "B")
 
     def test_unavailable_format_retries_best(self):
         FakeYDL.calls = 0

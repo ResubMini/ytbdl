@@ -35,7 +35,8 @@ _DEFAULTS = {
     # 登录信息（解决 YouTube 等的 bot-check）
     "cookie_source": "none",  # none | browser | file
     "cookie_browser": "",  # chrome / edge / firefox / ...
-    "cookie_profile": "",  # 浏览器 profile 文件夹名，空=最近使用的
+    "cookie_profile": "",  # 用户明确锁定的浏览器 profile
+    "cookie_profile_auto": True,
     "cookie_file": "",  # cookies.txt 的绝对路径（高级）
     "cookie_imported_at": 0,  # 快照导入时间戳（0=未导入）
     "cookie_imported_count": 0,  # 快照里 youtube 相关 cookie 数
@@ -115,6 +116,10 @@ class Settings:
     @property
     def cookie_profile(self) -> str:
         return self._data["cookie_profile"]
+
+    @property
+    def cookie_profile_auto(self) -> bool:
+        return bool(self._data["cookie_profile_auto"])
 
     @property
     def cookie_file(self) -> str:

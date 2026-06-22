@@ -17,7 +17,8 @@ from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 
 from .config import settings
-from .cookies import cookie_ydl_opts
+from .cookies import apply_cookie_jar, browser_cookie_jar, cookie_ydl_opts
+from .engine import runtime_ydl_opts
 from .hub import hub
 from .schemas import DownloadRequest, JobProgress
 
@@ -161,6 +162,7 @@ class JobManager:
             ]
 
         # 登录信息：借用浏览器 cookie 或 cookies.txt 文件（解析与下载共用）
+        ydl_opts.update(runtime_ydl_opts())
         ydl_opts.update(cookie_ydl_opts())
 
         # ffmpeg：release 由外壳通过 SIDECAR_FFMPEG 指向打包的 ffmpeg；
@@ -173,7 +175,9 @@ class JobManager:
 
         self._set_status(job_id, DOWNLOADING)
         try:
-            info = self._download_with_fallback(req.url, ydl_opts, req.extract_audio)
+            info = self._download_with_fallback(
+                req.url, ydl_opts, req.extract_audio, browser_cookie_jar()
+            )
             if self._cancel_flags.get(job_id):
                 self._set_status(job_id, CANCELLED)
                 return
@@ -198,9 +202,12 @@ class JobManager:
             self._fail(job_id, msg)
 
     @staticmethod
-    def _download_with_fallback(url: str, ydl_opts: dict, extract_audio: bool) -> dict:
+    def _download_with_fallback(
+        url: str, ydl_opts: dict, extract_audio: bool, cookie_jar=None
+    ) -> dict:
         try:
             with YoutubeDL(ydl_opts) as ydl:
+                apply_cookie_jar(ydl, cookie_jar)
                 return ydl.extract_info(url, download=True)
         except DownloadError as e:
             from .errors import is_format_unavailable
@@ -209,6 +216,7 @@ class JobManager:
             if not is_format_unavailable(str(e)) or ydl_opts.get("format") == fallback:
                 raise
             with YoutubeDL({**ydl_opts, "format": fallback}) as ydl:
+                apply_cookie_jar(ydl, cookie_jar)
                 return ydl.extract_info(url, download=True)
 
     # ---------- 钩子 ----------

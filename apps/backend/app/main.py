@@ -121,7 +121,8 @@ def create_app() -> FastAPI:
             settings.update(
                 cookie_source="browser",
                 cookie_browser=browser,
-                cookie_profile=result.get("profile", profile),
+                cookie_profile=profile,
+                cookie_profile_auto=not bool(profile),
                 cookie_imported_at=int(_time.time()),
                 cookie_imported_count=result.get("youtube_count", 0),
             )

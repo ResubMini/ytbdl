@@ -106,6 +106,9 @@ pub fn run() {
                 if let Some(ffmpeg) = resolve_resource(&resource_dir, "ffmpeg") {
                     cmd.env("SIDECAR_FFMPEG", &ffmpeg);
                 }
+                if let Some(deno) = resolve_resource(&resource_dir, "deno") {
+                    cmd.env("SIDECAR_DENO", &deno);
+                }
                 if let Ok(data_dir) = app.path().app_data_dir() {
                     cmd.env("SIDECAR_DATA_DIR", &data_dir);
                     let _ = create_dir_all(&data_dir);

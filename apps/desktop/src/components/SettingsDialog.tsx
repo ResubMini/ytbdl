@@ -100,7 +100,8 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
 
   async function handleImport() {
     const browser = draft.cookie_browser ?? config?.cookie_browser ?? "";
-    const profile = draft.cookie_profile ?? config?.cookie_profile ?? "";
+    const auto = draft.cookie_profile_auto ?? config?.cookie_profile_auto ?? true;
+    const profile = auto ? "" : (draft.cookie_profile ?? config?.cookie_profile ?? "");
     if (!browser) return;
     setImporting(true);
     setImportMsg(null);
@@ -109,7 +110,7 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
       if (r.ok) {
         setImportMsg({
           ok: true,
-          text: `✓ 成功导入 ${r.youtube_count} 条登录信息`,
+          text: `✓ ${r.resolved_profile || "默认账户"}：${r.youtube_count} 条`,
         });
         // 后端已把 cookie_source 设为 browser 并存了元信息，同步到草稿
         setDraft((d) => ({ ...d, ...r.config }));
@@ -259,17 +260,20 @@ export function SettingsDialog({ open, onOpenChange, config, onSave }: Props) {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">账户</Label>
                     <Select
-                      value={(draft.cookie_profile ?? config.cookie_profile) || "auto"}
-                      onValueChange={(v) =>
-                        set("cookie_profile", v === "auto" ? "" : v)
-                      }
+                      value={(draft.cookie_profile_auto ?? config.cookie_profile_auto)
+                        ? "auto"
+                        : (draft.cookie_profile ?? config.cookie_profile) || "auto"}
+                      onValueChange={(v) => {
+                        set("cookie_profile_auto", v === "auto");
+                        set("cookie_profile", v === "auto" ? "" : v);
+                      }}
                       disabled={profiles.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">默认</SelectItem>
+                        <SelectItem value="auto">自动选择可用账户（推荐）</SelectItem>
                         {profiles.map((p) => (
                           <SelectItem key={p.folder} value={p.folder}>
                             {p.name}

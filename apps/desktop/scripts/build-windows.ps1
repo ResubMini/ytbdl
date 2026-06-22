@@ -83,6 +83,13 @@ $ffExe = Get-ChildItem -Recurse -Filter "ffmpeg.exe" $ffEx | Select-Object -Firs
 Copy-Item $ffExe.FullName (Join-Path $resources "ffmpeg.exe") -Force
 Write-Host "  ffmpeg → $(Join-Path $resources 'ffmpeg.exe')"
 
+Write-Host "=== 下载 Deno（YouTube JS challenge） ===" -ForegroundColor Cyan
+$denoZip = Join-Path $env:TEMP "deno-win.zip"
+$denoEx = Join-Path $env:TEMP "deno-win"
+Invoke-WebRequest "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip" -OutFile $denoZip
+Expand-Archive $denoZip -DestinationPath $denoEx -Force
+Copy-Item (Join-Path $denoEx "deno.exe") (Join-Path $resources "deno.exe") -Force
+
 Write-Host "=== 拷 sidecar 到 resources ===" -ForegroundColor Cyan
 Copy-Item (Join-Path $backend "dist\mp4web-sidecar.exe") (Join-Path $resources "mp4web-sidecar.exe") -Force
 
@@ -98,6 +105,7 @@ Remove-Item $portable -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path (Join-Path $portable "resources") | Out-Null
 Copy-Item "src-tauri\target\release\desktop.exe" (Join-Path $portable "mp4WEB.exe")
 Copy-Item "src-tauri\resources\ffmpeg.exe" (Join-Path $portable "resources\ffmpeg.exe")
+Copy-Item "src-tauri\resources\deno.exe" (Join-Path $portable "resources\deno.exe")
 Copy-Item "src-tauri\resources\mp4web-sidecar.exe" (Join-Path $portable "resources\mp4web-sidecar.exe")
 
 Write-Host "=== 验证绿色版能拉起后台服务 ===" -ForegroundColor Cyan

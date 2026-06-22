@@ -5,6 +5,8 @@ P0：直接 import 已安装的 yt_dlp。
 """
 from __future__ import annotations
 
+import os
+
 import yt_dlp
 from yt_dlp.version import __version__ as YTDLP_VERSION
 
@@ -24,3 +26,8 @@ def engine_info() -> dict:
 
 def sidecar_info() -> dict:
     return {"sidecar_version": SIDECAR_VERSION}
+
+
+def runtime_ydl_opts() -> dict:
+    deno = os.environ.get("SIDECAR_DENO")
+    return {"js_runtimes": {"deno": {"path": deno} if deno else {}}}

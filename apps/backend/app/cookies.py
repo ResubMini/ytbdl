@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from yt_dlp.cookies import extract_cookies_from_browser
 
-from .browsers import resolve_profile
+from .browsers import profiles
 from .config import DATA_DIR, settings
 
 
@@ -15,33 +15,47 @@ def cleanup_legacy_snapshots() -> None:
             path.unlink(missing_ok=True)
 
 
+def _youtube_count(jar) -> int:
+    return sum(1 for cookie in jar if "youtube" in (cookie.domain or "").lower())
+
+
+def _select_profile(browser: str, requested: str | None):
+    """返回实际可用的 (profile, cookie jar, YouTube 数量)；空 requested 表示自动。"""
+    candidates = [requested] if requested else [row["folder"] for row in profiles(browser)]
+    if not candidates:
+        candidates = [""]
+
+    best = ("", None, 0)
+    errors = []
+    for profile in candidates:
+        try:
+            jar = extract_cookies_from_browser(browser, profile=profile or None)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(str(exc))
+            continue
+        current = (profile or "", jar, _youtube_count(jar))
+        if current[2] > best[2]:
+            best = current
+
+    if best[2] == 0:
+        detail = f"：{errors[0][:160]}" if errors else ""
+        label = requested or "自动选择的账户"
+        raise RuntimeError(f"{label} 未读取到 YouTube Cookie{detail}")
+    return best
+
+
 def import_from_browser(browser: str, profile: str | None) -> dict:
-    """验证浏览器/Profile 中可读取到 YouTube cookie。
-
-    注意：macOS 读 Chromium 系加密 cookie 会触发一次钥匙串授权。
-    """
+    """验证账户；空 Profile 时自动选择实际含 YouTube Cookie 的账户。"""
     try:
-        profile = resolve_profile(browser, profile)
-        jar = extract_cookies_from_browser(browser, profile=profile or None)
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "error": str(e)[:300], "count": 0, "youtube_count": 0}
-
-    count = len(jar)
-    youtube_count = sum(1 for c in jar if "youtube" in (c.domain or "").lower())
-    if youtube_count == 0:
-        return {
-            "ok": False,
-            "error": "未读取到 YouTube 登录信息，请确认所选浏览器/Profile 已登录后重试。",
-            "count": count,
-            "youtube_count": 0,
-        }
-
+        resolved, jar, youtube_count = _select_profile(browser, profile)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)[:300], "count": 0, "youtube_count": 0}
     return {
         "ok": True,
         "error": None,
-        "count": count,
+        "count": len(jar),
         "youtube_count": youtube_count,
-        "profile": profile,
+        "resolved_profile": resolved,
     }
 
 
@@ -51,9 +65,21 @@ def cookie_ydl_opts() -> dict:
     browser 模式：每次读取浏览器最新 cookie，跟上 YouTube 的 cookie 轮换。
     file 模式：用用户指定的 cookies.txt（高级选项）。
     """
-    if settings.cookie_source == "browser" and settings.cookie_browser:
-        profile = resolve_profile(settings.cookie_browser, settings.cookie_profile) or None
-        return {"cookiesfrombrowser": (settings.cookie_browser, profile)}
     if settings.cookie_source == "file" and settings.cookie_file:
         return {"cookiefile": settings.cookie_file}
     return {}
+
+
+def browser_cookie_jar():
+    """每次操作只读取一次浏览器 Cookie，并仅保存在内存中。"""
+    if settings.cookie_source != "browser" or not settings.cookie_browser:
+        return None
+    requested = "" if settings.cookie_profile_auto else settings.cookie_profile
+    _, jar, _ = _select_profile(settings.cookie_browser, requested)
+    return jar
+
+
+def apply_cookie_jar(ydl, jar) -> None:
+    if jar:
+        for cookie in jar:
+            ydl.cookiejar.set_cookie(cookie)

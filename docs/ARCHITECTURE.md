@@ -55,7 +55,7 @@
 | 状态 | Zustand + 原生 WebSocket |
 | 后端 | Python + FastAPI + uvicorn |
 | 后端打包 | PyInstaller（`--onefile`，每平台一份） |
-| 引擎 | yt-dlp（Unlicense）+ ffmpeg（静态二进制） |
+| 引擎 | yt-dlp + yt-dlp-ejs + Deno + ffmpeg |
 
 ## 5. 后端协议契约 `/v1/*`
 
@@ -108,8 +108,8 @@ POST   /v1/cookies/import      → 验证浏览器/Profile 登录信息
 
 ## 7. Cookie 方案（解决 YouTube bot-check）
 
-- 普通浏览器登录：设置中选择浏览器 + Profile 并验证；解析和下载时实时读取最新 cookie，跟上 YouTube 对打开标签页的 cookie 轮换。
-- 未明确选择 Chromium Profile 时，使用浏览器 `Local State` 的 `last_used`，避免 yt-dlp 按最新 Cookie 数据库误选其他账户。
+- 普通浏览器登录：解析和下载时只读取一次最新 cookie，并仅保存在内存中，跟上 YouTube 对打开标签页的 cookie 轮换。
+- 默认自动扫描 Profile，选择当前实际含 YouTube Cookie 最多的账户；用户也可明确锁定 Profile。旧配置默认迁移到自动模式。
 - 长期固定登录：高级选项读取 `cookies.txt`。按 yt-dlp 官方建议，应从独立无痕会话导出后立即关闭该会话；`cookies-from-browser` 无法读取这类无痕会话。
 - 读取到 0 条 YouTube cookie 时视为失败，不保存配置。
 - 旧版曾保存包含全部站点 cookie 的快照；新版启动时删除这些遗留明文文件。
@@ -156,4 +156,5 @@ ytbdl/
 - **cookie 注入**：`cookies.cookie_ydl_opts()` 解析+下载共用；browser 模式每次读取所选 Profile 的最新值，file 模式读取用户提供的固定 `cookies.txt`。
 - **格式选择**：具体画质构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
 - **ffmpeg**：mac 用 evermeet x86_64 静态（Rosetta），win 用 BtbN win64 静态。均只链系统库，可移植。
+- **YouTube JS challenge**：PyInstaller 收入 `yt-dlp-ejs`，App resources 自带 Deno，并通过 `SIDECAR_DENO` 指定路径。
 - **Windows 构建限制**：SSH 非交互会话下 cargo 的 libcurl DNS 线程失败，必须本地 PowerShell 跑或用 GitHub Actions。Windows Action 在 `ResubMini/ytbdl` 运行，需配置 `TAURI_SIGNING_PRIVATE_KEY` Secret。

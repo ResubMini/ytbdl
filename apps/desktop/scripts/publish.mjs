@@ -7,7 +7,7 @@
  * 产物在 apps/desktop/dist-publish/，手动上传到 Cloudflare R2（update.mp4web.com）。
  *   - latest.json 会「合并」已有条目（mac 跑补 darwin，win 跑补 windows）。
  */
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, readdirSync, chmodSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,18 @@ const platform = process.platform; // darwin | win32
 const isMac = platform === "darwin";
 const platformKey = isMac ? "darwin-aarch64" : "windows-x86_64";
 const archTag = isMac ? "aarch64" : "x64";
+
+// yt-dlp 的 YouTube JS challenge 需要 Deno；mac 本地构建直接复用已安装版本。
+const denoResource = resolve(srcTauri, "resources", isMac ? "deno" : "deno.exe");
+if (isMac && !existsSync(denoResource)) {
+  const deno = execSync("command -v deno", { encoding: "utf8" }).trim();
+  copyFileSync(deno, denoResource);
+  chmodSync(denoResource, 0o755);
+}
+if (!existsSync(denoResource)) {
+  console.error(`✗ 缺少 Deno runtime：${denoResource}`);
+  process.exit(1);
+}
 
 // 私钥
 const keyPath = resolve(srcTauri, ".updater-key");

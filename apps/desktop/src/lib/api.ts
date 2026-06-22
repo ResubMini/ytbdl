@@ -80,6 +80,7 @@ export interface AppConfig {
   cookie_source: "none" | "browser" | "file";
   cookie_browser: string;
   cookie_profile: string;
+  cookie_profile_auto: boolean;
   cookie_file: string;
   cookie_imported_at: number;
   cookie_imported_count: number;
@@ -162,6 +163,7 @@ export const api = {
       error: string | null;
       count: number;
       youtube_count: number;
+      resolved_profile: string;
       config: AppConfig;
     }>("/v1/cookies/import", {
       method: "POST",

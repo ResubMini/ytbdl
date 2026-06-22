@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from yt_dlp import YoutubeDL
 
-from .cookies import cookie_ydl_opts
+from .cookies import apply_cookie_jar, browser_cookie_jar, cookie_ydl_opts
+from .engine import runtime_ydl_opts
 from .schemas import FormatInfo, MediaInfo
 
 
@@ -79,8 +80,10 @@ def extract(url: str) -> MediaInfo:
         "noprogress": True,
         "extract_flat": False,
     }
+    ydl_opts.update(runtime_ydl_opts())
     ydl_opts.update(cookie_ydl_opts())
     with YoutubeDL(ydl_opts) as ydl:
+        apply_cookie_jar(ydl, browser_cookie_jar())
         info = ydl.extract_info(url, download=False)
 
     is_playlist = isinstance(info, dict) and (
