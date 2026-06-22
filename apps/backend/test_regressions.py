@@ -7,7 +7,9 @@ from unittest.mock import patch
 from yt_dlp.utils import DownloadError
 
 from app import cookies
-from app.jobs import JobManager
+from app.extract import _display_video_formats
+from app.jobs import JobManager, _format_plan
+from app.schemas import DownloadRequest, FormatInfo
 
 
 class EmptyJar:
@@ -42,6 +44,20 @@ class FakeYDL:
 
 
 class RegressionTests(unittest.TestCase):
+    def test_video_formats_are_deduplicated(self):
+        formats = [
+            FormatInfo(format_id="a", ext="mp4", resolution="1920x1080", vcodec="avc1", fps=25),
+            FormatInfo(format_id="b", ext="mp4", resolution="1920x1080", vcodec="avc1", fps=25, filesize=10),
+            FormatInfo(format_id="sb", ext="mp4", resolution="1920x1080", vcodec="images", fps=25),
+        ]
+        self.assertEqual([f.format_id for f in _display_video_formats(formats)], ["b"])
+
+    def test_mp4_selection_never_falls_back_to_webm(self):
+        req = DownloadRequest(url="test", format="137", container="mp4", format_has_audio=False)
+        selected, fallback, merge = _format_plan(req)
+        self.assertEqual(merge, "mp4")
+        self.assertNotIn("webm", selected + fallback)
+
     def test_legacy_cookie_snapshots_are_deleted(self):
         with tempfile.TemporaryDirectory() as tmp:
             old_data_dir = cookies.DATA_DIR

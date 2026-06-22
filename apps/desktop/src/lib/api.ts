@@ -129,6 +129,8 @@ export const api = {
   download: (body: {
     url: string;
     format?: string;
+    container?: "mp4" | "webm";
+    format_has_audio?: boolean;
     outtmpl?: string;
     extract_audio?: boolean;
     audio_format?: string;

@@ -143,7 +143,8 @@ powershell -ExecutionPolicy Bypass -File apps\desktop\scripts\build-windows.ps1
 - **sidecar 端口/token**：每次启动随机生成，Rust 通过 `initialization_script` 注入 `window.__SIDECAR__`（React 加载前生效，无竞态）。
 - **cookie 注入**：browser 模式将一次读取的 CookieJar 直接注入 yt-dlp 内存；file 模式使用固定 `cookies.txt`。
 - **YouTube 格式解析**：必须同时打包 `yt-dlp-ejs` 和 Deno；缺少任一项会导致格式残缺或不可下载。
-- **格式选择**：用户选具体画质时，后端构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
+- **格式选择**：用户选具体画质时，后端补齐兼容音频并回退到同容器最佳画质。
+- **容器与列表**：MP4/WebM 选择会贯穿音频补全、回退与合并；展示列表已过滤 storyboard，并按分辨率 + 容器 + FPS 去重。
 - **全局错误**：`main.py` 的 `@app.exception_handler(Exception)` 在最外层（CORS 中间件之外），**必须自补 CORS 头**，否则前端只见 `load failed`。
 - **updater**：公钥在 `tauri.conf.json plugins.updater.pubkey`；私钥在 `src-tauri/.updater-key`（gitignored，**丢失就再也无法推更新**，务必备份）。
 - **PyInstaller**：`build.py` 用 `--onefile`；Windows 产物带 `.exe`，build.py 已兼容。

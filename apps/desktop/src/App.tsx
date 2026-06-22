@@ -83,12 +83,18 @@ export default function App() {
 
   async function handleDownload() {
     if (!media) return;
+    const selected = media.formats?.find((f) => f.format_id === format);
     setDownloading(true);
     setError(null);
     try {
       await api.download({
         url: media.url,
         format: extractAudio ? "ba" : format,
+        container:
+          !extractAudio && (selected?.ext === "mp4" || selected?.ext === "webm")
+            ? selected.ext
+            : undefined,
+        format_has_audio: Boolean(selected?.acodec && selected.acodec !== "none"),
         extract_audio: extractAudio,
         audio_format: extractAudio ? audioFormat : undefined,
         language: audioLang || undefined,

@@ -54,6 +54,30 @@ def _distinct_audio_languages(formats: list[FormatInfo]) -> list[str]:
     return langs
 
 
+def _display_video_formats(formats: list[FormatInfo]) -> list[FormatInfo]:
+    """把 yt-dlp 的内部变体压成用户可理解的画质列表。"""
+    selected: dict[tuple, FormatInfo] = {}
+    for fmt in formats:
+        if (
+            not fmt.format_id
+            or fmt.ext not in ("mp4", "webm")
+            or not fmt.resolution
+            or not fmt.vcodec
+            or fmt.vcodec in ("none", "images")
+        ):
+            continue
+        key = (fmt.resolution, fmt.ext, round(fmt.fps or 0))
+        score = (bool(fmt.filesize or fmt.filesize_approx), fmt.tbr or fmt.vbr or 0)
+        current = selected.get(key)
+        current_score = (
+            bool(current and (current.filesize or current.filesize_approx)),
+            (current.tbr or current.vbr or 0) if current else 0,
+        )
+        if current is None or score > current_score:
+            selected[key] = fmt
+    return list(selected.values())
+
+
 def _normalize_entry(info: dict, url: str | None = None) -> MediaInfo:
     formats = [_normalize_format(f) for f in (info.get("formats") or [])]
     return MediaInfo(
@@ -66,7 +90,7 @@ def _normalize_entry(info: dict, url: str | None = None) -> MediaInfo:
         webpage_url=info.get("webpage_url"),
         ext=info.get("ext"),
         is_live=info.get("is_live"),
-        formats=formats,
+        formats=_display_video_formats(formats),
         audio_languages=_distinct_audio_languages(formats),
     )
 

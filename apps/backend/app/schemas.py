@@ -4,6 +4,8 @@
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -45,6 +47,8 @@ MediaInfo.model_rebuild()
 class DownloadRequest(BaseModel):
     url: str
     format: str | None = None  # yt-dlp 格式选择器，如 "bestvideo*+bestaudio/best"
+    container: Literal["mp4", "webm"] | None = None
+    format_has_audio: bool = False
     outtmpl: str | None = None  # 输出模板，None 用默认
     extract_audio: bool = False  # 提取音频（转 mp3/m4a 等）
     audio_format: str | None = None  # 提取音频时的目标编码，默认 mp3

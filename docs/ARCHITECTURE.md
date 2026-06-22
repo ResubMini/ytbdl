@@ -154,7 +154,9 @@ ytbdl/
 - **sidecar 注入**：Rust 生成随机 port+token，通过 `initialization_script` 设 `window.__SIDECAR__`（React 加载前生效）。
 - **启动画面**：Rust 不再 `wait_ready`，窗口秒开显示 Splash，前端轮询 `health` 就绪后切主界面。
 - **cookie 注入**：`cookies.cookie_ydl_opts()` 解析+下载共用；browser 模式每次读取所选 Profile 的最新值，file 模式读取用户提供的固定 `cookies.txt`。
-- **格式选择**：具体画质构造 `{format_id}+bestaudio/best`（补音频 + 回退），永不报「format not available」。
+- **格式选择**：具体画质会补齐兼容音频，并在不可用时回退到同容器的最佳画质。
+- **容器保持**：前端随 `format_id` 传 MP4/WebM 容器及是否自带音频；后端的补音频、回退和最终封装严格保持所选容器。
+- **格式列表**：仅返回 MP4/WebM 真视频格式，按分辨率 + 容器 + FPS 去重，优先保留有大小/码率的变体。
 - **ffmpeg**：mac 用 evermeet x86_64 静态（Rosetta），win 用 BtbN win64 静态。均只链系统库，可移植。
 - **YouTube JS challenge**：PyInstaller 收入 `yt-dlp-ejs`，App resources 自带 Deno，并通过 `SIDECAR_DENO` 指定路径。
 - **Windows 构建限制**：SSH 非交互会话下 cargo 的 libcurl DNS 线程失败，必须本地 PowerShell 跑或用 GitHub Actions。Windows Action 在 `ResubMini/ytbdl` 运行，需配置 `TAURI_SIGNING_PRIVATE_KEY` Secret。

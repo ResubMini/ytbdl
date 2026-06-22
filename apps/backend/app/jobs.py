@@ -33,6 +33,34 @@ CANCELLED = "cancelled"
 OUTTMPL_NAME = "%(title).200B [%(id)s].%(ext)s"
 
 
+def _format_plan(req: DownloadRequest) -> tuple[str | None, str, str | None]:
+    fmt = req.format
+    if req.extract_audio:
+        selected = f"bestaudio[language={req.language}]/bestaudio" if req.language else (fmt or "ba")
+        return selected, "ba/b", None
+
+    specific = bool(fmt and "+" not in fmt and "/" not in fmt and "best" not in fmt)
+    if specific and req.container in ("mp4", "webm"):
+        audio_ext = "m4a" if req.container == "mp4" else "webm"
+        language = f"[language={req.language}]" if req.language else ""
+        audio = f"bestaudio{language}[ext={audio_ext}]"
+        fallback = (
+            f"bestvideo[ext={req.container}]+bestaudio[ext={audio_ext}]"
+            f"/best[ext={req.container}]"
+        )
+        selected = fmt if req.format_has_audio and not req.language else f"{fmt}+{audio}"
+        return f"{selected}/{fallback}", fallback, req.container
+
+    if req.language:
+        if specific:
+            fmt = f"{fmt}+bestaudio[language={req.language}]/bestvideo*+bestaudio/best"
+        else:
+            fmt = f"bestvideo*+bestaudio[language={req.language}]/best"
+    elif specific:
+        fmt = f"{fmt}+bestaudio/best"
+    return fmt, "bv*+ba/b", None
+
+
 class JobManager:
     def __init__(self) -> None:
         self._concurrency: int = settings.max_concurrent
@@ -132,24 +160,12 @@ class JobManager:
             "postprocessor_hooks": [lambda d: self._on_postprocess(job_id, d)],
             "outtmpl": req.outtmpl or str(Path(download_dir) / OUTTMPL_NAME),
         }
-        # 格式 + 音轨语言选择
-        fmt = req.format
-        if req.language:
-            lang = req.language
-            if req.extract_audio:
-                # 仅音频：直接锁定该语言的音轨
-                fmt = f"bestaudio[language={lang}]/bestaudio"
-            elif fmt and "+" not in fmt and "best" not in fmt:
-                # 用户选了具体视频格式_id：该视频 + 指定语言音轨（带回退）
-                fmt = f"{fmt}+bestaudio[language={lang}]/bestvideo*+bestaudio/best"
-            else:
-                # 预设：最佳视频 + 指定语言音轨
-                fmt = f"bestvideo*+bestaudio[language={lang}]/best"
-        elif fmt and "+" not in fmt and "/" not in fmt and "best" not in fmt:
-            # 用户选了具体视频格式_id（纯视频DASH流）：补最佳音频 + 回退，避免没声音/格式不存在
-            fmt = f"{fmt}+bestaudio/best"
+        # 指定 MP4/WebM 时，音频、回退和最终封装保持同一容器。
+        fmt, fallback_format, merge_format = _format_plan(req)
         if fmt:
             ydl_opts["format"] = fmt
+        if merge_format:
+            ydl_opts["merge_output_format"] = merge_format
         # 提取音频：下载最佳音频后转码
         if req.extract_audio:
             ydl_opts.setdefault("format", "ba")
@@ -176,7 +192,11 @@ class JobManager:
         self._set_status(job_id, DOWNLOADING)
         try:
             info = self._download_with_fallback(
-                req.url, ydl_opts, req.extract_audio, browser_cookie_jar()
+                req.url,
+                ydl_opts,
+                req.extract_audio,
+                browser_cookie_jar(),
+                fallback_format,
             )
             if self._cancel_flags.get(job_id):
                 self._set_status(job_id, CANCELLED)
@@ -203,7 +223,11 @@ class JobManager:
 
     @staticmethod
     def _download_with_fallback(
-        url: str, ydl_opts: dict, extract_audio: bool, cookie_jar=None
+        url: str,
+        ydl_opts: dict,
+        extract_audio: bool,
+        cookie_jar=None,
+        fallback_format: str | None = None,
     ) -> dict:
         try:
             with YoutubeDL(ydl_opts) as ydl:
@@ -212,7 +236,7 @@ class JobManager:
         except DownloadError as e:
             from .errors import is_format_unavailable
 
-            fallback = "ba/b" if extract_audio else "bv*+ba/b"
+            fallback = fallback_format or ("ba/b" if extract_audio else "bv*+ba/b")
             if not is_format_unavailable(str(e)) or ydl_opts.get("format") == fallback:
                 raise
             with YoutubeDL({**ydl_opts, "format": fallback}) as ydl:
